@@ -33,7 +33,7 @@ public class HomeFragment extends BaseFragment implements View.OnClickListener {
         buttonInternal.setOnClickListener(this);
         buttonExternal.setOnClickListener(this);
 
-        fragmentInstanceListener.setTitle(Mode.HOME.name(), false);
+        fragmentInstanceListener.setTitle(getString(R.string.app_name), false);
 
         return view;
     }
@@ -47,7 +47,9 @@ public class HomeFragment extends BaseFragment implements View.OnClickListener {
             fragmentInstanceListener.setFragment(
                     PersistDataFragment.getInstance(Mode.EXTERNAL));
         } else {
-            throw new IllegalArgumentException("Id " + view.getId() + " not found");
+            throw new IllegalArgumentException(String.format(
+                    getString(R.string.id_not_found_message),
+                    view.getId()));
         }
     }
 

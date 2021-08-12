@@ -3,28 +3,41 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:layout_weight="5"
     android:orientation="vertical">
 
     <EditText
+        android:id="@+id/input_title"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:hint="@string/hint_title"
         android:importantForAutofill="no"
         android:inputType="text" />
 
-    <ScrollView
-        android:id="@+id/scroll_view"
+    <EditText
+        android:id="@+id/input_content"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="8dp"
-        android:fillViewport="true">
+        android:layout_height="0dp"
+        android:layout_marginVertical="8dp"
+        android:layout_weight="3"
+        android:gravity="top|left"
+        android:hint="@string/hint_content"
+        android:importantForAutofill="no"
+        android:inputType="textMultiLine"
+        android:lines="8"
+        android:maxLines="10"
+        android:minHeight="200dp"
+        android:minLines="6"
+        android:scrollbars="vertical"
+        tools:ignore="RtlHardcoded"
+        tools:text="@tools:sample/lorem/random" />
 
-        <TextView
-            android:id="@+id/text_content"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            tools:text="@tools:sample/lorem/random" />
-
-    </ScrollView>
+    <Button
+        android:id="@+id/button_manipulate_content"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        tools:ignore="SpeakableTextPresentCheck" />
 
 </LinearLayout>
