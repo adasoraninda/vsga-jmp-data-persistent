@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Data Persistent Android</string>
+    <string name="internal_storage">Internal Storage</string>
+    <string name="external_storage">External Storage</string>
+    <string name="create_file">Buat File</string>
+    <string name="update_file">Ubah File</string>
+    <string name="read_file">Baca File</string>
+    <string name="del_file">Hapus File</string>
+    <string name="hasil">Hasil</string>
+    <string name="hint_title">Judul file</string>
+</resources>
