@@ -28,4 +28,5 @@
     <string name="command_not_found_message">Perintah tidak ditemukan</string>
     <string name="permission_granted">Izin diterima</string>
     <string name="permission_denied">Izin ditolak</string>
+    <string name="state_file_error_message">Error state</string>
 </resources>

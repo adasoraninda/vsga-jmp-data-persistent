@@ -2,10 +2,7 @@ package com.adasoranina.datapersistentandroid.ui;
 
 import static com.adasoranina.datapersistentandroid.ui.PersistDataFragment.MODE;
 
-import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.os.Environment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,19 +15,18 @@ import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.adasoranina.datapersistentandroid.R;
+import com.adasoranina.datapersistentandroid.model.ExternalStorage;
 import com.adasoranina.datapersistentandroid.model.FileModel;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
+import com.adasoranina.datapersistentandroid.model.IEStorage;
+import com.adasoranina.datapersistentandroid.model.InternalStorage;
+import com.adasoranina.datapersistentandroid.model.MessageCallback;
 
 public class ContentDataFragment extends Fragment implements PersistDataFragment.CommandContentListener, View.OnClickListener {
 
     private EditText inputTitle;
     private EditText inputContent;
     private Button buttonManipulate;
+    private IEStorage ieStorage;
 
     @Nullable
     private FileModel fileModel;
@@ -61,43 +57,22 @@ public class ContentDataFragment extends Fragment implements PersistDataFragment
         inputContent = view.findViewById(R.id.input_content);
         buttonManipulate = view.findViewById(R.id.button_manipulate_content);
 
+        ieStorage = getMyParentFragment().getMode(getArguments()) == BaseFragment.Mode.INTERNAL ?
+                new InternalStorage(requireContext()) :
+                new ExternalStorage(requireContext());
+
         toggleStateEnableView(false);
+        buttonManipulate.setOnClickListener(this);
 
         if (getParentFragment() instanceof PersistDataFragment) {
             ((PersistDataFragment) getParentFragment()).setCommandListener(this);
         }
 
-        buttonManipulate.setOnClickListener(this);
-
         return view;
     }
 
-    private void toggleStateEnableView(boolean state) {
-        inputTitle.setEnabled(state);
-        inputContent.setEnabled(state);
-        buttonManipulate.setEnabled(state);
-        toggleStateColorView();
-    }
-
-    private void toggleStateColorView() {
-        toggleStateColorInputTitle();
-        toggleStateColorInputContent();
-    }
-
-    private void toggleStateColorInputTitle() {
-        boolean state = inputTitle.isEnabled();
-
-        inputTitle.setTextColor(ContextCompat.getColor(requireContext(), R.color.black));
-        inputTitle.setBackgroundColor(ContextCompat.getColor(requireContext(),
-                state ? android.R.color.transparent : android.R.color.darker_gray));
-    }
-
-    private void toggleStateColorInputContent() {
-        boolean state = inputContent.isEnabled();
-
-        inputContent.setTextColor(ContextCompat.getColor(requireContext(), R.color.black));
-        inputContent.setBackgroundColor(ContextCompat.getColor(requireContext(),
-                state ? android.R.color.transparent : android.R.color.darker_gray));
+    private BaseFragment getMyParentFragment() {
+        return ((PersistDataFragment) getParentFragment());
     }
 
     private void resetView() {
@@ -133,13 +108,57 @@ public class ContentDataFragment extends Fragment implements PersistDataFragment
 
     private void executeCommand(FileModel fileModel) {
         if (fileModel.getId() == R.id.button_create_file) {
-            createFile(fileModel.getTitle(), fileModel.getContent());
+            ieStorage.createFile(fileModel.getTitle(), fileModel.getContent(), new MessageCallback() {
+                @Override
+                public void success(String message) {
+                    getMyParentFragment().showToastMessage(message);
+                }
+
+                @Override
+                public void error(String message) {
+                    getMyParentFragment().showToastMessage(message);
+                }
+            });
+
         } else if (fileModel.getId() == R.id.button_update_file) {
-            updateFile(fileModel.getTitle(), fileModel.getContent());
+            ieStorage.updateFile(fileModel.getTitle(), fileModel.getContent(), new MessageCallback() {
+                @Override
+                public void success(String message) {
+                    getMyParentFragment().showToastMessage(message);
+                }
+
+                @Override
+                public void error(String message) {
+                    getMyParentFragment().showToastMessage(message);
+                }
+            });
         } else if (fileModel.getId() == R.id.button_read_file) {
-            readFile(fileModel.getTitle());
+            ieStorage.readFile(fileModel.getTitle(), new MessageCallback() {
+                @Override
+                public void success(String message) {
+                    getMyParentFragment().showToastMessage(String.format(
+                            getString(R.string.read_success_message),
+                            fileModel.getTitle()));
+                    inputContent.setText(message);
+                }
+
+                @Override
+                public void error(String message) {
+                    getMyParentFragment().showToastMessage(message);
+                }
+            });
         } else if (fileModel.getId() == R.id.button_del_file) {
-            deleteFile(fileModel.getTitle());
+            ieStorage.deleteFile(fileModel.getTitle(), new MessageCallback() {
+                @Override
+                public void success(String message) {
+                    getMyParentFragment().showToastMessage(message);
+                }
+
+                @Override
+                public void error(String message) {
+                    getMyParentFragment().showToastMessage(message);
+                }
+            });
         } else {
             throw new IllegalArgumentException(getString(R.string.command_not_found_message));
         }
@@ -167,144 +186,36 @@ public class ContentDataFragment extends Fragment implements PersistDataFragment
                     getString(R.string.id_not_found_message),
                     view.getId()));
         }
+
         getMyParentFragment().closeKeyboard(view);
     }
 
-    private void createFile(String fileName, String contentFile) {
-        try {
-            File path;
-            if (getMyParentFragment().getMode(getArguments()) == BaseFragment.Mode.INTERNAL) {
-                path = requireActivity().getFilesDir();
-            } else {
-                String state = Environment.getExternalStorageState();
-
-                if (!Environment.MEDIA_MOUNTED.equals(state)) {
-                    return;
-                }
-
-                // path = Environment.getExternalStorageDirectory();
-                path = requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
-            }
-
-            File file = new File(path, fileName);
-
-            boolean fileCreated = file.createNewFile();
-
-            if (fileCreated) {
-                FileOutputStream outputStream = new FileOutputStream(file, true);
-                outputStream.write(contentFile.getBytes());
-                outputStream.flush();
-                outputStream.close();
-            }
-
-            getMyParentFragment().showToastMessage(String.format(
-                    getString(R.string.create_success_message),
-                    fileName));
-        } catch (Exception e) {
-            e.printStackTrace();
-            getMyParentFragment().showToastMessage(String.format(
-                    getString(R.string.create_fail_message),
-                    fileName));
-        }
+    private void toggleStateEnableView(boolean state) {
+        inputTitle.setEnabled(state);
+        inputContent.setEnabled(state);
+        buttonManipulate.setEnabled(state);
+        toggleStateColorView();
     }
 
-    private void updateFile(String fileName, String newContentFile) {
-        try {
-            File path;
-            if (getMyParentFragment().getMode(getArguments()) == BaseFragment.Mode.INTERNAL) {
-                path = requireActivity().getFilesDir();
-            } else {
-                String state = Environment.getExternalStorageState();
-
-                if (!Environment.MEDIA_MOUNTED.equals(state)) {
-                    return;
-                }
-
-                // path = Environment.getExternalStorageDirectory();
-                path = requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
-            }
-
-            File file = new File(path, fileName);
-
-            boolean fileCreated = file.createNewFile();
-
-            if (fileCreated) {
-                createFile(fileName, newContentFile);
-                return;
-            }
-
-            FileOutputStream outputStream = new FileOutputStream(file, false);
-            outputStream.write(newContentFile.getBytes());
-            outputStream.flush();
-            outputStream.close();
-
-            getMyParentFragment().showToastMessage(String.format(
-                    getString(R.string.update_success_message),
-                    fileName));
-        } catch (Exception e) {
-            e.printStackTrace();
-            getMyParentFragment().showToastMessage(String.format(
-                    getString(R.string.update_fail_message),
-                    fileName));
-        }
+    private void toggleStateColorView() {
+        toggleStateColorInputTitle();
+        toggleStateColorInputContent();
     }
 
-    private void readFile(String fileName) {
-        File path = getMyParentFragment().getMode(getArguments()) == BaseFragment.Mode.INTERNAL ?
-                requireActivity().getFilesDir() :
-                requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
-        File file = new File(path, fileName);
+    private void toggleStateColorInputTitle() {
+        boolean state = inputTitle.isEnabled();
 
-        if (!file.exists()) {
-            getMyParentFragment().showToastMessage(getString(R.string.file_not_found));
-            return;
-        }
-
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            StringBuilder text = new StringBuilder();
-
-            String line;
-            while ((line = br.readLine()) != null) {
-                text.append(line).append("\n");
-            }
-
-            getMyParentFragment().showToastMessage(String.format(
-                    getString(R.string.read_success_message),
-                    fileName));
-
-            inputContent.setText(text.toString());
-        } catch (IOException e) {
-            getMyParentFragment().showToastMessage(String.format(
-                    getString(R.string.read_fail_message),
-                    fileName));
-        }
+        inputTitle.setTextColor(ContextCompat.getColor(requireContext(), R.color.black));
+        inputTitle.setBackgroundColor(ContextCompat.getColor(requireContext(),
+                state ? android.R.color.transparent : android.R.color.darker_gray));
     }
 
-    private void deleteFile(String fileName) {
-        File path = getMyParentFragment().getMode(getArguments()) == BaseFragment.Mode.INTERNAL ?
-                requireActivity().getFilesDir() :
-                requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
+    private void toggleStateColorInputContent() {
+        boolean state = inputContent.isEnabled();
 
-        File file = new File(path, fileName);
-
-        if (!file.exists()) {
-            getMyParentFragment().showToastMessage(getString(R.string.file_not_found));
-            return;
-        }
-
-        boolean fileDeleted = file.delete();
-
-        String message = String.format(getString(
-                fileDeleted ?
-                        R.string.del_success_message :
-                        R.string.del_fail_message),
-                fileName);
-
-        getMyParentFragment().showToastMessage(message);
-    }
-
-    private BaseFragment getMyParentFragment() {
-        return ((PersistDataFragment) getParentFragment());
+        inputContent.setTextColor(ContextCompat.getColor(requireContext(), R.color.black));
+        inputContent.setBackgroundColor(ContextCompat.getColor(requireContext(),
+                state ? android.R.color.transparent : android.R.color.darker_gray));
     }
 
 }
